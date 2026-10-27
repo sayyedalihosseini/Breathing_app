@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Breathe — Sleep & Focus</title>
+
+<!-- Home Screen / Dock web app (iOS, iPadOS, macOS Safari) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Breathe">
+<meta name="application-name" content="Breathe">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<!-- Full-bleed, opaque squares: the OS applies its own squircle mask -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/apple-touch-icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icons/apple-touch-icon-120.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png">
+<style>
+  :root {
+    --c: #6366f1;               /* active phase colour */
+    --ease: cubic-bezier(0.45, 0, 0.25, 1);
+    --t: 1.5s;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* ---------- Mode bar ---------- */
+  .modes {
+    position: fixed;
+    top: max(20px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    z-index: 10;
+  }
+  .modes button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 36px;
+    color: rgba(255,255,255,0.35);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color var(--t) var(--ease), background var(--t) var(--ease), box-shadow var(--t) var(--ease);
+  }
+  .modes button svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: filter var(--t) var(--ease);
+  }
+  .modes button:hover { color: rgba(255,255,255,0.65); }
+  .modes button.active {
+    color: var(--c);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 0 14px -4px var(--c);
+  }
+  .modes button.active svg { filter: drop-shadow(0 0 4px var(--c)); }
+  .modes button:focus-visible { outline: 1px solid var(--c); }
+
+  /* ---------- Stage ---------- */
+  .stage {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    touch-action: none;   /* we handle horizontal swipes ourselves */
+  }
+  .particles { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .particle {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: var(--pc);
+    box-shadow: 0 0 6px 1px var(--pc);
+    opacity: 0;
+    animation: burst var(--d) cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+  }
+  @keyframes burst {
+    0%   { opacity: 0;   transform: translate(-50%, -50%) translate(0, 0) scale(1); }
+    15%  { opacity: 0.9; }
+    100% { opacity: 0;   transform: translate(-50%, -50%) translate(var(--x), var(--y)) scale(0.3); }
+  }
+
+  /* Scale wrapper: duration is set from JS to match each breath phase */
+  .scaler {
+    position: relative;
+    width: min(56vw, 56vh, 300px);
+    aspect-ratio: 1;
+    transform: scale(1);
+    transition: transform var(--t) var(--ease);
+    cursor: pointer;
+    outline: none;
+  }
+  .blob {
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--c);
+    border-radius: 50%;
+    background: transparent;
+    box-shadow:
+      0 0 24px 2px color-mix(in srgb, var(--c) 55%, transparent),
+      0 0 80px 8px color-mix(in srgb, var(--c) 22%, transparent),
+      inset 0 0 24px 2px color-mix(in srgb, var(--c) 45%, transparent),
+      inset 0 0 70px 6px color-mix(in srgb, var(--c) 14%, transparent);
+    transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease), opacity var(--t) var(--ease);
+    will-change: border-radius;
+  }
+  .blob.ghost {
+    inset: -14px;
+    border-width: 1px;
+    opacity: 0.25;
+    box-shadow: none;
+  }
+  .scaler:focus-visible .blob:not(.ghost) { border-width: 3px; }
+
+  /* Centre text is counter-scaled so it stays a constant size */
+  .center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    pointer-events: none;
+    transition: transform var(--t) var(--ease);
+  }
+  .phase {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    padding-left: 0.32em;
+    color: var(--c);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--c) 60%, transparent);
+    transition: color var(--t) var(--ease), opacity 0.6s var(--ease);
+  }
+  .count {
+    font-size: 56px;
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: rgba(255,255,255,0.92);
+    transition: opacity 0.6s var(--ease);
+  }
+  .hint {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    line-height: 1.7;
+    text-align: center;
+    white-space: pre-line;
+    color: rgba(255,255,255,0.35);
+    transition: opacity 0.6s var(--ease);
+  }
+
+  /* ---------- Footer / levels ---------- */
+  .footer {
+    position: fixed;
+    bottom: max(28px, calc(env(safe-area-inset-bottom) + 12px));
+    left: 16px; right: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+    pointer-events: none;
+  }
+  .protocol {
+    font-size: 10px;
+    color: rgba(255,255,255,0.18);
+  }
+  .level {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    color: rgba(255,255,255,0.45);
+  }
+  .level .name {
+    color: var(--c);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent);
+    transition: color var(--t) var(--ease);
+  }
+  .level .name:empty { display: none; }
+  .level .name::before {
+    content: '·';
+    margin-right: 10px;
+    color: rgba(255,255,255,0.3);
+    text-shadow: none;
+  }
+  .track {
+    position: relative;
+    width: min(240px, 70vw);
+    height: 2px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.08);
+  }
+  .fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 0;
+    border-radius: inherit;
+    background: var(--c);
+    box-shadow: 0 0 8px var(--c);
+    transition: width 1.2s var(--ease), background var(--t) var(--ease), box-shadow var(--t) var(--ease);
+  }
+  .tick {
+    position: absolute;
+    top: 50%;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: #000;
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: background var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
+  }
+  .tick.on {
+    background: var(--c);
+    border-color: var(--c);
+    box-shadow: 0 0 8px var(--c);
+  }
+  .meta {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: rgba(255,255,255,0.3);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+  .meta b { font-weight: 400; color: rgba(255,255,255,0.7); }
+
+  /* Level-up announcement */
+  .levelup {
+    position: fixed;
+    left: 0; right: 0;
+    top: 18%;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+    transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+    z-index: 5;
+  }
+  .levelup.show { opacity: 1; transform: none; }
+  .levelup small {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 8px;
+  }
+  .levelup strong {
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--c);
+    text-shadow: 0 0 18px color-mix(in srgb, var(--c) 70%, transparent);
+  }
+
+  /* Swipe follow */
+  .drag {
+    transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.6s var(--ease);
+  }
+  .drag.dragging { transition: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .particle { display: none; }
+  }
+</style>
+</head>
+<body>
+
+  <nav class="modes" role="tablist" aria-label="Breathing mode">
+    <button class="active" data-mode="sleep" role="tab" aria-selected="true" aria-label="Sleep" title="Sleep · 4-7-8">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/><path d="M16.5 3.5v3M15 5h3"/></svg>
+    </button>
+    <button data-mode="focus" role="tab" aria-selected="false" aria-label="Focus" title="Focus · Box breathing">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
+    </button>
+  </nav>
+
+  <main class="stage">
+    <div class="particles" id="particles"></div>
+
+    <div class="drag" id="drag">
+      <div class="scaler" id="scaler" role="button" tabindex="0" aria-label="Start or pause breathing">
+        <div class="blob ghost" id="ghost"></div>
+        <div class="blob" id="blob"></div>
+        <div class="center" id="center">
+          <div class="phase" id="phase">SLEEP</div>
+          <div class="count" id="count">4·7·8</div>
+          <div class="hint" id="hint">TAP TO BEGIN</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="levelup" id="levelup" aria-live="polite">
+    <small id="levelupNum">LEVEL 1</small>
+    <strong id="levelupName"></strong>
+  </div>
+
+  <footer class="footer">
+    <span class="protocol" id="protocol">4-7-8 technique</span>
+    <div class="level">
+      <span id="levelNum">Level 0</span>
+      <span class="name" id="levelName"></span>
+    </div>
+    <div class="track" id="track"><div class="fill" id="fill"></div></div>
+    <div class="meta" id="meta"></div>
+  </footer>
+
+<script>
+(() => {
+  const MODES = {
+    sleep: {
+      label: 'SLEEP',
+      idle: '4·7·8',
+      protocol: '4-7-8 technique',
+      shape: 0,            // 0 = circle, 1 = rounded square
+      rest: '#6366f1',
+      levels: [
+        { at: 4, name: 'Screen Off' },
+        { at: 6, name: 'Silence the Brain' },
+        { at: 8, name: 'Knockout' },
+      ],
+      phases: [
+        { name: 'INHALE', secs: 4, color: '#6366f1', scale: 1.38 },
+        { name: 'HOLD',   secs: 7, color: '#a855f7', scale: 1.38 },
+        { name: 'EXHALE', secs: 8, color: '#2dd4bf', scale: 0.82 },
+      ],
+    },
+    focus: {
+      label: 'FOCUS',
+      idle: '4·4·4·4',
+      protocol: 'Box breathing',
+      shape: 1,
+      rest: '#38bdf8',
+      levels: [
+        { at: 5,  name: 'Coffee Bypass' },
+        { at: 10, name: 'Lock In' },
+        { at: 15, name: 'God Mode' },
+      ],
+      phases: [
+        { name: 'INHALE', secs: 4, color: '#38bdf8', scale: 1.34 },
+        { name: 'HOLD',   secs: 4, color: '#10b981', scale: 1.34 },
+        { name: 'EXHALE', secs: 4, color: '#8b5cf6', scale: 0.84 },
+        { name: 'HOLD',   secs: 4, color: '#f43f5e', scale: 0.84 },
+      ],
+    },
+  };
+
+  const root = document.documentElement;
+  const $ = id => document.getElementById(id);
+  const scaler = $('scaler'), center = $('center'), blob = $('blob'), ghost = $('ghost');
+  const phaseEl = $('phase'), countEl = $('count'), hintEl = $('hint');
+  const protocolEl = $('protocol'), particles = $('particles'), drag = $('drag');
+  const levelNumEl = $('levelNum'), levelNameEl = $('levelName'), trackEl = $('track'), fillEl = $('fill'), metaEl = $('meta');
+  const levelupEl = $('levelup'), levelupNumEl = $('levelupNum'), levelupNameEl = $('levelupName');
+  const modeButtons = document.querySelectorAll('.modes button');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let mode = 'sleep';
+  let running = false;
+  let phaseIndex = 0;
+  let phaseStart = 0;
+  let cycles = 0;
+  let lastShown = null;
+
+  // ---------- Scale (CSS transitions, duration matched to the phase) ----------
+  function setScale(scale, seconds, easing) {
+    const t = `transform ${seconds}s ${easing}`;
+    scaler.style.transition = t;
+    center.style.transition = t;
+    scaler.style.transform = `scale(${scale})`;
+    center.style.transform = `scale(${1 / scale})`;
+  }
+
+  function setColor(c) { root.style.setProperty('--c', c); }
+
+  // ---------- Phases ----------
+  function enterPhase(i, now) {
+    const p = MODES[mode].phases[i];
+    phaseIndex = i;
+    phaseStart = now;
+    lastShown = null;
+    setColor(p.color);
+    phaseEl.textContent = p.name;
+
+    const prev = MODES[mode].phases[(i - 1 + MODES[mode].phases.length) % MODES[mode].phases.length];
+    if (p.scale !== prev.scale || i === 0) {
+      // Breathing movement spans the full phase so the shape never stalls or jumps
+      setScale(p.scale, p.secs, 'cubic-bezier(0.37, 0, 0.63, 1)');
+    }
+    burst(p.color);
+  }
+
+  function start() {
+    running = true;
+    hintEl.style.opacity = 0;
+    scaler.setAttribute('aria-label', 'Pause breathing');
+    const now = performance.now();
+    // First inhale starts from the resting 1.0x scale
+    enterPhase(0, now);
+    setScale(MODES[mode].phases[0].scale, MODES[mode].phases[0].secs, 'cubic-bezier(0.37, 0, 0.63, 1)');
+  }
+
+  function stop() {
+    running = false;
+    scaler.setAttribute('aria-label', 'Start breathing');
+    // Gently settle back to rest instead of snapping
+    setScale(1, 1.5, 'cubic-bezier(0.45, 0, 0.25, 1)');
+    showIdle();
+  }
+
+  function showIdle() {
+    const m = MODES[mode];
+    setColor(m.rest);
+    phaseEl.textContent = m.label;
+    countEl.textContent = m.idle;
+    hintEl.textContent = cycles ? 'TAP TO RESUME' : 'TAP TO BEGIN\n‹  SWIPE  ›';
+    hintEl.style.opacity = 1;
+  }
+
+  function toggle() { running ? stop() : start(); }
+
+  // Switching mode always ends the current session and starts the new one at Level 0
+  function setMode(next) {
+    if (next === mode) return;
+    if (running) stop();
+    mode = next;
+    cycles = 0;
+    modeButtons.forEach(b => {
+      const on = b.dataset.mode === mode;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on);
+    });
+    protocolEl.textContent = MODES[mode].protocol;
+    levelupEl.classList.remove('show');
+    buildTrack();
+    renderLevel();
+    showIdle();
+  }
+
+  // ---------- Levels ----------
+  function levelFor(n) {
+    const lv = MODES[mode].levels;
+    let i = 0;
+    while (i < lv.length && n >= lv[i].at) i++;
+    return i;                               // 0 … 3
+  }
+
+  function buildTrack() {
+    trackEl.querySelectorAll('.tick').forEach(t => t.remove());
+    const lv = MODES[mode].levels, max = lv[lv.length - 1].at;
+    lv.forEach(l => {
+      const t = document.createElement('i');
+      t.className = 'tick';
+      t.style.left = (l.at / max * 100) + '%';
+      t.title = `Level ${lv.indexOf(l) + 1} · ${l.name} (${l.at} cycles)`;
+      trackEl.appendChild(t);
+    });
+  }
+
+  function renderLevel() {
+    const lv = MODES[mode].levels, max = lv[lv.length - 1].at;
+    const level = levelFor(cycles);
+    levelNumEl.textContent = `Level ${level}`;
+    levelNameEl.textContent = level ? lv[level - 1].name : '';
+    fillEl.style.width = Math.min(100, cycles / max * 100) + '%';
+    trackEl.querySelectorAll('.tick').forEach((t, i) => t.classList.toggle('on', cycles >= lv[i].at));
+    const word = cycles === 1 ? 'cycle' : 'cycles';
+    if (level < lv.length) {
+      const next = lv[level];
+      metaEl.innerHTML = `<b>${cycles}</b> ${word} · ${next.at - cycles} to ${next.name}`;
+    } else {
+      metaEl.innerHTML = `<b>${cycles}</b> ${word} · Max level`;
+    }
+  }
+
+  let levelupTimer;
+  function announceLevel(level) {
+    const l = MODES[mode].levels[level - 1];
+    levelupNumEl.textContent = `LEVEL ${level}`;
+    levelupNameEl.textContent = l.name;
+    levelupEl.classList.add('show');
+    clearTimeout(levelupTimer);
+    levelupTimer = setTimeout(() => levelupEl.classList.remove('show'), 3800);
+    const c = getComputedStyle(root).getPropertyValue('--c').trim();
+    burst(c, 40, 1.8);
+    setTimeout(() => burst(c, 28, 2.6), 280);
+  }
+
+  function completeCycle() {
+    const before = levelFor(cycles);
+    cycles++;
+    const after = levelFor(cycles);
+    renderLevel();
+    if (after > before) announceLevel(after);
+  }
+
+  // ---------- Particles ----------
+  function burst(color, n = 18, reach = 1) {
+    if (reduceMotion) return;
+    const rect = scaler.getBoundingClientRect();
+    const base = rect.width / 2;
+    for (let k = 0; k < n; k++) {
+      const el = document.createElement('span');
+      el.className = 'particle';
+      const a = (k / n) * Math.PI * 2 + Math.random() * 0.4;
+      const r0 = base * (0.85 + Math.random() * 0.2);
+      const r1 = r0 + (60 + Math.random() * 120) * reach;
+      const size = 1.5 + Math.random() * 2.5;
+      el.style.width = el.style.height = size + 'px';
+      el.style.marginLeft = Math.cos(a) * r0 + 'px';
+      el.style.marginTop = Math.sin(a) * r0 + 'px';
+      el.style.setProperty('--x', Math.cos(a) * (r1 - r0) + 'px');
+      el.style.setProperty('--y', Math.sin(a) * (r1 - r0) + 'px');
+      el.style.setProperty('--d', (1.6 + Math.random() * 1.4) + 's');
+      el.style.setProperty('--pc', color);
+      el.style.animationDelay = Math.random() * 0.25 + 's';
+      el.addEventListener('animationend', () => el.remove());
+      particles.appendChild(el);
+    }
+  }
+
+  // ---------- Fluid outline morph ----------
+  // `shape` eases toward 0 (circle) or 1 (rounded square); a slow wobble keeps the outline organic.
+  let shape = 0;
+  let last = performance.now();
+
+  function radii(t, s, seed) {
+    const base = 50 - s * 26;              // 50% circle -> 24% soft-cornered square
+    const amp = reduceMotion ? 0 : 15 - s * 7;
+    const v = [];
+    for (let k = 0; k < 8; k++) {
+      const w = Math.sin(t * (0.0006 + k * 0.00011) + k * 1.7 + seed)
+              + 0.6 * Math.sin(t * 0.00037 + k * 2.3 + seed * 2)
+              + 0.3 * Math.sin(t * 0.0013 + k * 0.9 + seed * 3);
+      v.push((base + amp * w / 1.9).toFixed(2) + '%');
+    }
+    return `${v[0]} ${v[1]} ${v[2]} ${v[3]} / ${v[4]} ${v[5]} ${v[6]} ${v[7]}`;
+  }
+
+  // Slow drift rotation with a gentle sway; the ghost ring counter-rotates
+  function rotation(t, dir, seed) {
+    if (reduceMotion) return 0;
+    return dir * t * 0.006 + 14 * Math.sin(t * 0.00045 + seed) + 6 * Math.sin(t * 0.0011 + seed * 2);
+  }
+
+  function frame(now) {
+    const dt = Math.min(now - last, 64);
+    last = now;
+
+    const target = MODES[mode].shape;
+    shape += (target - shape) * (1 - Math.exp(-dt / 420));   // ~1.5s settle
+    blob.style.borderRadius = radii(now, shape, 0);
+    ghost.style.borderRadius = radii(now, shape, 3.1);
+    blob.style.transform = `rotate(${rotation(now, 1, 0).toFixed(2)}deg)`;
+    ghost.style.transform = `rotate(${rotation(now, -1.4, 2.2).toFixed(2)}deg)`;
+
+    if (running) {
+      const phases = MODES[mode].phases;
+      const p = phases[phaseIndex];
+      const elapsed = (now - phaseStart) / 1000;
+      if (elapsed >= p.secs) {
+        const nextIdx = (phaseIndex + 1) % phases.length;
+        if (nextIdx === 0) completeCycle();
+        enterPhase(nextIdx, phaseStart + p.secs * 1000);
+      } else {
+        const remaining = Math.max(1, Math.ceil(p.secs - elapsed));
+        if (remaining !== lastShown) {
+          countEl.textContent = remaining;
+          lastShown = remaining;
+        }
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Events ----------
+  let swiped = false;   // swallow the click that follows a swipe
+  scaler.addEventListener('click', () => {
+    if (swiped) { swiped = false; return; }
+    toggle();
+  });
+  scaler.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === ' ' && document.activeElement === document.body) { e.preventDefault(); toggle(); }
+    if (e.key === 'ArrowLeft')  swipe(1);
+    if (e.key === 'ArrowRight') swipe(-1);
+  });
+  modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+  // ---------- Swipe between modes ----------
+  // Swipe left → Focus, swipe right → Sleep (same order as the mode bar)
+  const ORDER = ['sleep', 'focus'];
+  function swipe(dir) {                     // dir: +1 = next (swipe left), -1 = previous
+    const i = ORDER.indexOf(mode) + dir;
+    if (i < 0 || i >= ORDER.length) { nudge(-dir); return; }
+    drag.style.opacity = 0.35;
+    drag.style.transform = `translateX(${-dir * 40}px)`;
+    setMode(ORDER[i]);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      drag.style.opacity = '';
+      drag.style.transform = '';
+    }));
+  }
+  // Nothing further that way: a small rubber-band bounce
+  function nudge(dir) {
+    drag.style.transform = `translateX(${dir * 18}px)`;
+    setTimeout(() => { drag.style.transform = ''; }, 140);
+  }
+
+  const stage = document.querySelector('.stage');
+  let sx = 0, sy = 0, dx = 0, tracking = false, horizontal = null;
+  stage.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    tracking = true; horizontal = null;
+    sx = e.clientX; sy = e.clientY; dx = 0;
+  });
+  window.addEventListener('pointermove', e => {
+    if (!tracking) return;
+    dx = e.clientX - sx;
+    const dy = e.clientY - sy;
+    if (horizontal === null && Math.hypot(dx, dy) > 10) horizontal = Math.abs(dx) > Math.abs(dy);
+    if (horizontal) {
+      drag.classList.add('dragging');
+      drag.style.transform = `translateX(${dx * 0.35}px)`;   // follow the finger with resistance
+    }
+  });
+  function endDrag() {
+    if (!tracking) return;
+    tracking = false;
+    drag.classList.remove('dragging');
+    if (horizontal) {
+      swiped = true;
+      setTimeout(() => { swiped = false; }, 50);
+      if (Math.abs(dx) > 60) swipe(dx < 0 ? 1 : -1);
+      else drag.style.transform = '';
+    }
+  }
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+
+  // Mac trackpad: two-finger horizontal swipe
+  let wheelX = 0, wheelLock = 0, wheelReset;
+  window.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    const now = performance.now();
+    if (now < wheelLock) return;
+    wheelX += e.deltaX;
+    clearTimeout(wheelReset);
+    wheelReset = setTimeout(() => { wheelX = 0; }, 180);
+    if (Math.abs(wheelX) > 90) {
+      swipe(wheelX > 0 ? 1 : -1);
+      wheelX = 0;
+      wheelLock = now + 900;
+    }
+  }, { passive: false });
+
+  // Resync the clock if the tab was hidden mid-session
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && running) enterPhase(phaseIndex, performance.now());
+  });
+
+  buildTrack();
+  renderLevel();
+  showIdle();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

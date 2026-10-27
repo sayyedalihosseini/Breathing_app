@@ -96,19 +96,19 @@
       cursor: pointer;
     }
 
-    /* Outlined Dynamic Shape */
+    /* Outlined Dynamic Shape with Ultra Smooth Transitions */
     .blob {
       position: absolute;
       width: 190px;
       height: 190px;
       background: transparent;
-      border: 2.5px solid #818cf8;
+      border: 2px solid #818cf8;
       border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-      box-shadow: 0 0 35px rgba(129, 140, 248, 0.25), inset 0 0 20px rgba(129, 140, 248, 0.1);
-      transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1), 
-                  border-color 1.5s ease, 
-                  box-shadow 1.5s ease, 
-                  border-radius 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 35px rgba(129, 140, 248, 0.2), inset 0 0 20px rgba(129, 140, 248, 0.08);
+      transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 1.6s ease, 
+                  box-shadow 1.6s ease, 
+                  border-radius 1.6s cubic-bezier(0.4, 0, 0.2, 1);
       animation: morphSleep 8s ease-in-out infinite, float 6s ease-in-out infinite;
     }
 
@@ -134,38 +134,44 @@
       50% { transform: translateY(-6px) scale(var(--current-scale, 1)); }
     }
 
-    /* Cute Face Expression */
-    .face {
+    /* Center Text Display */
+    .center-display {
       position: relative;
       z-index: 3;
-      font-size: 2rem;
-      letter-spacing: 2px;
-      opacity: 0.9;
-      transition: opacity 1s ease, transform 1s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       pointer-events: none;
-      color: #ffffff;
-      text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+      text-align: center;
     }
 
-    /* Status & Cycles */
-    .status-text {
-      position: absolute;
-      bottom: 18%;
-      z-index: 2;
-      font-size: 1.05rem;
+    .phase-label {
+      font-size: 0.9rem;
       font-weight: 300;
-      letter-spacing: 2px;
-      color: rgba(255, 255, 255, 0.5);
+      letter-spacing: 3px;
       text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 2px;
       transition: opacity 0.8s ease, color 0.8s ease;
     }
 
+    .timer-val {
+      font-size: 2.4rem;
+      font-weight: 200;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.95);
+      font-variant-numeric: tabular-nums;
+      transition: opacity 0.8s ease;
+    }
+
+    /* Cycles Counter at Bottom */
     .cycle-count {
       position: absolute;
       bottom: 10%;
       z-index: 2;
       font-size: 0.8rem;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       color: rgba(255, 255, 255, 0.2);
       transition: opacity 0.8s ease;
     }
@@ -183,17 +189,19 @@
 
     <div class="circle-wrapper" id="circleTrigger">
       <div class="blob" id="blob"></div>
-      <div class="face" id="face">⊙ ‿ ⊙</div>
+      <div class="center-display">
+        <div class="phase-label" id="phaseLabel">TAP TO</div>
+        <div class="timer-val" id="timerVal">START</div>
+      </div>
     </div>
 
-    <div class="status-text" id="statusText">Tap to Start</div>
     <div class="cycle-count" id="cycleCount">Cycles completed: 0</div>
   </div>
 
   <script>
     const blob = document.getElementById('blob');
-    const face = document.getElementById('face');
-    const statusText = document.getElementById('statusText');
+    const phaseLabel = document.getElementById('phaseLabel');
+    const timerVal = document.getElementById('timerVal');
     const cycleCount = document.getElementById('cycleCount');
     const circleTrigger = document.getElementById('circleTrigger');
     const btnSleep = document.getElementById('btnSleep');
@@ -262,22 +270,26 @@
     }
     animateParticles();
 
-    // Outlined Phases Style
     const MODES = {
       sleep: [
-        { name: "Inhale", duration: 4, color: "#818cf8", glow: "0 0 45px rgba(129, 140, 248, 0.4), inset 0 0 25px rgba(129, 140, 248, 0.15)", scale: 1.6, face: "( ⊙ ‿ ⊙ )" },
-        { name: "Hold",   duration: 7, color: "#c084fc", glow: "0 0 55px rgba(192, 132, 252, 0.5), inset 0 0 30px rgba(192, 132, 252, 0.2)", scale: 1.6, face: "( ＞ ‿ ＜ )" },
-        { name: "Exhale", duration: 8, color: "#2dd4bf", glow: "0 0 30px rgba(45, 212, 191, 0.3), inset 0 0 15px rgba(45, 212, 191, 0.1)",  scale: 1,   face: "( u ‿ u )" }
+        { name: "Inhale", duration: 4, color: "#818cf8", glow: "0 0 45px rgba(129, 140, 248, 0.4), inset 0 0 25px rgba(129, 140, 248, 0.15)", scale: 1.6 },
+        { name: "Hold",   duration: 7, color: "#c084fc", glow: "0 0 55px rgba(192, 132, 252, 0.5), inset 0 0 30px rgba(192, 132, 252, 0.2)", scale: 1.6 },
+        { name: "Exhale", duration: 8, color: "#2dd4bf", glow: "0 0 30px rgba(45, 212, 191, 0.3), inset 0 0 15px rgba(45, 212, 191, 0.1)",  scale: 1 }
       ],
       focus: [
-        { name: "Inhale", duration: 4, color: "#38bdf8", glow: "0 0 45px rgba(56, 189, 248, 0.4), inset 0 0 25px rgba(56, 189, 248, 0.15)", scale: 1.45, face: "( ◉ ‿ ◉ )" },
-        { name: "Hold",   duration: 4, color: "#34d399", glow: "0 0 45px rgba(52, 211, 153, 0.4), inset 0 0 25px rgba(52, 211, 153, 0.15)", scale: 1.45, face: "( ⏠ ‿ ⏠ )" },
-        { name: "Exhale", duration: 4, color: "#818cf8", glow: "0 0 30px rgba(129, 140, 248, 0.3), inset 0 0 15px rgba(129, 140, 248, 0.1)", scale: 1,    face: "( ⩌ ‿ ⩌ )" },
-        { name: "Hold",   duration: 4, color: "#f43f5e", glow: "0 0 30px rgba(244, 63, 94, 0.3), inset 0 0 15px rgba(244, 63, 94, 0.1)",   scale: 1,    face: "( ಠ ‿ ಠ )" }
+        { name: "Inhale", duration: 4, color: "#38bdf8", glow: "0 0 45px rgba(56, 189, 248, 0.4), inset 0 0 25px rgba(56, 189, 248, 0.15)", scale: 1.45 },
+        { name: "Hold",   duration: 4, color: "#34d399", glow: "0 0 45px rgba(52, 211, 153, 0.4), inset 0 0 25px rgba(52, 211, 153, 0.15)", scale: 1.45 },
+        { name: "Exhale", duration: 4, color: "#818cf8", glow: "0 0 30px rgba(129, 140, 248, 0.3), inset 0 0 15px rgba(129, 140, 248, 0.1)", scale: 1 },
+        { name: "Hold",   duration: 4, color: "#f43f5e", glow: "0 0 30px rgba(244, 63, 94, 0.3), inset 0 0 15px rgba(244, 63, 94, 0.1)",   scale: 1 }
       ]
     };
 
     let secondsLeft = 0;
+
+    function applyScale(scaleVal) {
+      blob.style.setProperty('--current-scale', scaleVal);
+      blob.style.transform = `scale(${scaleVal})`;
+    }
 
     function switchMode(mode) {
       if (currentMode === mode) return;
@@ -301,15 +313,13 @@
 
     function startBreathing() {
       isRunning = true;
-      statusText.style.opacity = "1";
       runPhase(0);
     }
 
     function stopBreathing() {
       isRunning = false;
       clearTimeout(timer);
-      blob.style.setProperty('--current-scale', 1);
-      blob.style.transform = 'scale(1)';
+      applyScale(1);
       
       if (currentMode === 'sleep') {
         blob.style.borderColor = "#818cf8";
@@ -319,9 +329,9 @@
         blob.style.boxShadow = "0 0 35px rgba(56, 189, 248, 0.25)";
       }
       
-      face.textContent = "⊙ ‿ ⊙";
-      statusText.textContent = "Tap to Start";
-      statusText.style.color = "rgba(255, 255, 255, 0.5)";
+      phaseLabel.textContent = "TAP TO";
+      timerVal.textContent = "START";
+      phaseLabel.style.color = "rgba(255, 255, 255, 0.6)";
     }
 
     function runPhase(phaseIdx) {
@@ -330,18 +340,18 @@
       const phase = phases[phaseIdx];
       secondsLeft = phase.duration;
 
-      blob.style.setProperty('--current-scale', phase.scale);
-      blob.style.transform = `scale(${phase.scale})`;
+      applyScale(phase.scale);
       blob.style.borderColor = phase.color;
       blob.style.boxShadow = phase.glow;
-      face.textContent = phase.face;
-      statusText.style.color = "rgba(255, 255, 255, 0.85)";
+      
+      phaseLabel.textContent = phase.name;
+      phaseLabel.style.color = phase.color;
 
       createBurst(phase.color);
 
       const updateCountdown = () => {
         if (!isRunning) return;
-        statusText.textContent = `${phase.name} • ${secondsLeft}`;
+        timerVal.textContent = secondsLeft;
         secondsLeft--;
 
         if (secondsLeft >= 0) {

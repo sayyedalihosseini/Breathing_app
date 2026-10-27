@@ -39,40 +39,41 @@
       background: #000000;
     }
 
-    /* Mode Selector at Top */
+    /* Minimal Floating Mode Tabs */
     .mode-selector {
       position: absolute;
-      top: 10%;
+      top: 8%;
       display: flex;
       gap: 12px;
       z-index: 10;
-      background: rgba(255, 255, 255, 0.05);
-      padding: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 5px;
       border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(20px);
+      transition: all 0.5s ease;
     }
 
     .mode-btn {
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.4);
+      color: rgba(255, 255, 255, 0.35);
       padding: 8px 18px;
       font-size: 0.85rem;
-      font-weight: 500;
+      font-weight: 400;
       border-radius: 20px;
       cursor: pointer;
       letter-spacing: 0.5px;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.5s ease;
     }
 
     .mode-btn.active {
       color: #ffffff;
-      background: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
     }
 
-    /* Canvas for Particles */
+    /* Canvas for Subtle Particles */
     #particle-canvas {
       position: absolute;
       top: 0;
@@ -83,7 +84,7 @@
       z-index: 1;
     }
 
-    /* Circle / Box Container */
+    /* Container */
     .circle-wrapper {
       position: relative;
       width: 280px;
@@ -95,22 +96,26 @@
       cursor: pointer;
     }
 
-    /* Organic Blob (Default: Sleep Mode) */
+    /* Outlined Dynamic Shape */
     .blob {
       position: absolute;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle at 35% 35%, #6366f1, #3b82f6);
+      width: 190px;
+      height: 190px;
+      background: transparent;
+      border: 2.5px solid #818cf8;
       border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-      box-shadow: 0 0 50px rgba(99, 102, 241, 0.3);
-      transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1), background 1.5s ease, box-shadow 1.5s ease, border-radius 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 0 35px rgba(129, 140, 248, 0.25), inset 0 0 20px rgba(129, 140, 248, 0.1);
+      transition: transform 1.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 1.5s ease, 
+                  box-shadow 1.5s ease, 
+                  border-radius 1.5s cubic-bezier(0.4, 0, 0.2, 1);
       animation: morphSleep 8s ease-in-out infinite, float 6s ease-in-out infinite;
     }
 
-    /* Square Morph (Focus Mode) */
+    /* Focus Mode Organic Square Outline */
     .blob.focus-mode {
       border-radius: 28% 28% 28% 28% / 28% 28% 28% 28%;
-      animation: morphFocus 6s ease-in-out infinite, float 6s ease-in-out infinite;
+      animation: morphFocus 7s ease-in-out infinite, float 6s ease-in-out infinite;
     }
 
     @keyframes morphSleep {
@@ -121,63 +126,61 @@
 
     @keyframes morphFocus {
       0%, 100% { border-radius: 28% 28% 28% 28% / 28% 28% 28% 28%; }
-      50% { border-radius: 38% 22% 35% 25% / 25% 38% 22% 35%; }
+      50% { border-radius: 36% 24% 33% 27% / 27% 36% 24% 33%; }
     }
 
     @keyframes float {
       0%, 100% { transform: translateY(0px) scale(var(--current-scale, 1)); }
-      50% { transform: translateY(-8px) scale(var(--current-scale, 1)); }
+      50% { transform: translateY(-6px) scale(var(--current-scale, 1)); }
     }
 
-    /* Cute Face */
+    /* Cute Face Expression */
     .face {
       position: relative;
       z-index: 3;
       font-size: 2rem;
       letter-spacing: 2px;
-      opacity: 0.95;
-      transition: all 0.5s ease;
+      opacity: 0.9;
+      transition: opacity 1s ease, transform 1s ease;
       pointer-events: none;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      color: #ffffff;
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
     }
 
-    /* Status Text & Cycle Count */
+    /* Status & Cycles */
     .status-text {
       position: absolute;
       bottom: 18%;
       z-index: 2;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 300;
       letter-spacing: 2px;
-      color: rgba(255, 255, 255, 0.6);
+      color: rgba(255, 255, 255, 0.5);
       text-transform: uppercase;
-      transition: opacity 0.5s ease, color 0.5s ease;
+      transition: opacity 0.8s ease, color 0.8s ease;
     }
 
     .cycle-count {
       position: absolute;
       bottom: 10%;
       z-index: 2;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       letter-spacing: 1px;
-      color: rgba(255, 255, 255, 0.25);
-      transition: opacity 0.5s ease;
+      color: rgba(255, 255, 255, 0.2);
+      transition: opacity 0.8s ease;
     }
   </style>
 </head>
 <body>
 
   <div class="app-container">
-    <!-- Top Mode Selection -->
     <div class="mode-selector">
       <button class="mode-btn active" id="btnSleep" onclick="switchMode('sleep')">Sleep 4-7-8</button>
       <button class="mode-btn" id="btnFocus" onclick="switchMode('focus')">Focus 4-4-4-4</button>
     </div>
 
-    <!-- Background Particle Canvas -->
     <canvas id="particle-canvas"></canvas>
 
-    <!-- Center Trigger Blob -->
     <div class="circle-wrapper" id="circleTrigger">
       <div class="blob" id="blob"></div>
       <div class="face" id="face">⊙ ‿ ⊙</div>
@@ -198,13 +201,12 @@
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
 
-    let currentMode = 'sleep'; // 'sleep' or 'focus'
+    let currentMode = 'sleep';
     let isRunning = false;
     let timer = null;
     let cycles = 0;
     let particles = [];
 
-    // Canvas Resize
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -212,17 +214,16 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Particle Logic
     class Particle {
       constructor(x, y, color) {
         this.x = x;
         this.y = y;
         this.color = color;
-        this.radius = Math.random() * 3 + 1.5;
-        this.vx = (Math.random() - 0.5) * 1.2;
-        this.vy = (Math.random() - 0.5) * 1.2;
-        this.alpha = 1;
-        this.decay = Math.random() * 0.01 + 0.005;
+        this.radius = Math.random() * 2 + 1;
+        this.vx = (Math.random() - 0.5) * 0.8;
+        this.vy = (Math.random() - 0.5) * 0.8;
+        this.alpha = 0.8;
+        this.decay = Math.random() * 0.008 + 0.004;
       }
 
       update() {
@@ -245,7 +246,7 @@
     function createBurst(color) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 20; i++) {
         particles.push(new Particle(centerX, centerY, color));
       }
     }
@@ -261,18 +262,18 @@
     }
     animateParticles();
 
-    // Mode Phase Configurations
+    // Outlined Phases Style
     const MODES = {
       sleep: [
-        { name: "Inhale", duration: 4, color: "radial-gradient(circle at 35% 35%, #818cf8, #4f46e5)", glow: "0 0 80px rgba(129, 140, 248, 0.6)", scale: 1.65, face: "( ⊙ ‿ ⊙ )" },
-        { name: "Hold",   duration: 7, color: "radial-gradient(circle at 35% 35%, #c084fc, #9333ea)", glow: "0 0 90px rgba(192, 132, 252, 0.7)", scale: 1.65, face: "( ＞ ‿ ＜ )" },
-        { name: "Exhale", duration: 8, color: "radial-gradient(circle at 35% 35%, #2dd4bf, #0d9488)", glow: "0 0 50px rgba(45, 212, 191, 0.4)",  scale: 1,    face: "( u ‿ u )" }
+        { name: "Inhale", duration: 4, color: "#818cf8", glow: "0 0 45px rgba(129, 140, 248, 0.4), inset 0 0 25px rgba(129, 140, 248, 0.15)", scale: 1.6, face: "( ⊙ ‿ ⊙ )" },
+        { name: "Hold",   duration: 7, color: "#c084fc", glow: "0 0 55px rgba(192, 132, 252, 0.5), inset 0 0 30px rgba(192, 132, 252, 0.2)", scale: 1.6, face: "( ＞ ‿ ＜ )" },
+        { name: "Exhale", duration: 8, color: "#2dd4bf", glow: "0 0 30px rgba(45, 212, 191, 0.3), inset 0 0 15px rgba(45, 212, 191, 0.1)",  scale: 1,   face: "( u ‿ u )" }
       ],
       focus: [
-        { name: "Inhale", duration: 4, color: "radial-gradient(circle at 35% 35%, #38bdf8, #0284c7)", glow: "0 0 80px rgba(56, 189, 248, 0.6)", scale: 1.5, face: "( ◉ ‿ ◉ )" },
-        { name: "Hold",   duration: 4, color: "radial-gradient(circle at 35% 35%, #34d399, #059669)", glow: "0 0 80px rgba(52, 211, 153, 0.6)", scale: 1.5, face: "( ⏠ ‿ ⏠ )" },
-        { name: "Exhale", duration: 4, color: "radial-gradient(circle at 35% 35%, #818cf8, #4338ca)", glow: "0 0 50px rgba(129, 140, 248, 0.4)", scale: 1,   face: "( ⩌ ‿ ⩌ )" },
-        { name: "Hold",   duration: 4, color: "radial-gradient(circle at 35% 35%, #f43f5e, #be123c)", glow: "0 0 50px rgba(244, 63, 94, 0.4)",  scale: 1,   face: "( ಠ ‿ ಠ )" }
+        { name: "Inhale", duration: 4, color: "#38bdf8", glow: "0 0 45px rgba(56, 189, 248, 0.4), inset 0 0 25px rgba(56, 189, 248, 0.15)", scale: 1.45, face: "( ◉ ‿ ◉ )" },
+        { name: "Hold",   duration: 4, color: "#34d399", glow: "0 0 45px rgba(52, 211, 153, 0.4), inset 0 0 25px rgba(52, 211, 153, 0.15)", scale: 1.45, face: "( ⏠ ‿ ⏠ )" },
+        { name: "Exhale", duration: 4, color: "#818cf8", glow: "0 0 30px rgba(129, 140, 248, 0.3), inset 0 0 15px rgba(129, 140, 248, 0.1)", scale: 1,    face: "( ⩌ ‿ ⩌ )" },
+        { name: "Hold",   duration: 4, color: "#f43f5e", glow: "0 0 30px rgba(244, 63, 94, 0.3), inset 0 0 15px rgba(244, 63, 94, 0.1)",   scale: 1,    face: "( ಠ ‿ ಠ )" }
       ]
     };
 
@@ -287,12 +288,14 @@
         btnSleep.classList.add('active');
         btnFocus.classList.remove('active');
         blob.classList.remove('focus-mode');
-        blob.style.background = "radial-gradient(circle at 35% 35%, #6366f1, #3b82f6)";
+        blob.style.borderColor = "#818cf8";
+        blob.style.boxShadow = "0 0 35px rgba(129, 140, 248, 0.25)";
       } else {
         btnFocus.classList.add('active');
         btnSleep.classList.remove('active');
         blob.classList.add('focus-mode');
-        blob.style.background = "radial-gradient(circle at 35% 35%, #0284c7, #0369a1)";
+        blob.style.borderColor = "#38bdf8";
+        blob.style.boxShadow = "0 0 35px rgba(56, 189, 248, 0.25)";
       }
     }
 
@@ -309,16 +312,16 @@
       blob.style.transform = 'scale(1)';
       
       if (currentMode === 'sleep') {
-        blob.style.background = "radial-gradient(circle at 35% 35%, #6366f1, #3b82f6)";
-        blob.style.boxShadow = "0 0 50px rgba(99, 102, 241, 0.3)";
+        blob.style.borderColor = "#818cf8";
+        blob.style.boxShadow = "0 0 35px rgba(129, 140, 248, 0.25)";
       } else {
-        blob.style.background = "radial-gradient(circle at 35% 35%, #0284c7, #0369a1)";
-        blob.style.boxShadow = "0 0 50px rgba(2, 132, 199, 0.3)";
+        blob.style.borderColor = "#38bdf8";
+        blob.style.boxShadow = "0 0 35px rgba(56, 189, 248, 0.25)";
       }
       
       face.textContent = "⊙ ‿ ⊙";
       statusText.textContent = "Tap to Start";
-      statusText.style.color = "rgba(255, 255, 255, 0.6)";
+      statusText.style.color = "rgba(255, 255, 255, 0.5)";
     }
 
     function runPhase(phaseIdx) {
@@ -329,16 +332,12 @@
 
       blob.style.setProperty('--current-scale', phase.scale);
       blob.style.transform = `scale(${phase.scale})`;
-      blob.style.background = phase.color;
+      blob.style.borderColor = phase.color;
       blob.style.boxShadow = phase.glow;
       face.textContent = phase.face;
-      statusText.style.color = "rgba(255,255,255,0.9)";
+      statusText.style.color = "rgba(255, 255, 255, 0.85)";
 
-      // Particle Burst on Phase Change
-      const burstColor = phase.color.includes('#818cf8') ? '#818cf8' : 
-                         phase.color.includes('#c084fc') ? '#c084fc' : 
-                         phase.color.includes('#38bdf8') ? '#38bdf8' : '#34d399';
-      createBurst(burstColor);
+      createBurst(phase.color);
 
       const updateCountdown = () => {
         if (!isRunning) return;
@@ -360,7 +359,6 @@
       updateCountdown();
     }
 
-    // Toggle Play/Pause on Center Click
     circleTrigger.addEventListener('click', () => {
       if (isRunning) {
         stopBreathing();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Breath - Sleep & Focus</title>
+  <title>4-7-8 Sleep Breath</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
@@ -20,7 +20,7 @@
       height: 100%;
       overflow: hidden;
       background-color: #000000;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #ffffff;
       display: flex;
       flex-direction: column;
@@ -39,41 +39,6 @@
       background: #000000;
     }
 
-    /* Minimal Floating Mode Tabs */
-    .mode-selector {
-      position: absolute;
-      top: 8%;
-      display: flex;
-      gap: 12px;
-      z-index: 10;
-      background: rgba(255, 255, 255, 0.03);
-      padding: 5px;
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(20px);
-      transition: all 0.5s ease;
-    }
-
-    .mode-btn {
-      background: transparent;
-      border: none;
-      color: rgba(255, 255, 255, 0.35);
-      padding: 8px 18px;
-      font-size: 0.85rem;
-      font-weight: 400;
-      border-radius: 20px;
-      cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: all 0.5s ease;
-    }
-
-    .mode-btn.active {
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
-    }
-
-    /* Canvas for Subtle Particles */
     #particle-canvas {
       position: absolute;
       top: 0;
@@ -84,7 +49,6 @@
       z-index: 1;
     }
 
-    /* Container */
     .circle-wrapper {
       position: relative;
       width: 280px;
@@ -96,45 +60,31 @@
       cursor: pointer;
     }
 
-    /* Outlined Dynamic Shape with Ultra Smooth Transitions */
+    /* Original Organic Outlined Blob */
     .blob {
       position: absolute;
-      width: 190px;
-      height: 190px;
+      width: 200px;
+      height: 200px;
       background: transparent;
-      border: 2px solid #818cf8;
+      border: 2px solid #6366f1;
       border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-      box-shadow: 0 0 35px rgba(129, 140, 248, 0.2), inset 0 0 20px rgba(129, 140, 248, 0.08);
-      transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1), 
-                  border-color 1.6s ease, 
-                  box-shadow 1.6s ease, 
-                  border-radius 1.6s cubic-bezier(0.4, 0, 0.2, 1);
-      animation: morphSleep 8s ease-in-out infinite, float 6s ease-in-out infinite;
+      box-shadow: 0 0 50px rgba(99, 102, 241, 0.25), inset 0 0 20px rgba(99, 102, 241, 0.1);
+      transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1), border-color 1.5s ease, box-shadow 1.5s ease;
+      animation: morph 8s ease-in-out infinite, float 6s ease-in-out infinite;
     }
 
-    /* Focus Mode Organic Square Outline */
-    .blob.focus-mode {
-      border-radius: 28% 28% 28% 28% / 28% 28% 28% 28%;
-      animation: morphFocus 7s ease-in-out infinite, float 6s ease-in-out infinite;
-    }
-
-    @keyframes morphSleep {
+    @keyframes morph {
       0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
       34% { border-radius: 70% 30% 50% 50% / 30% 60% 40% 70%; }
       67% { border-radius: 100% 60% 30% 70% / 60% 30% 70% 40%; }
     }
 
-    @keyframes morphFocus {
-      0%, 100% { border-radius: 28% 28% 28% 28% / 28% 28% 28% 28%; }
-      50% { border-radius: 36% 24% 33% 27% / 27% 36% 24% 33%; }
-    }
-
     @keyframes float {
-      0%, 100% { transform: translateY(0px) scale(var(--current-scale, 1)); }
-      50% { transform: translateY(-6px) scale(var(--current-scale, 1)); }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
     }
 
-    /* Center Text Display */
+    /* Center Text Display (Replacing the face) */
     .center-display {
       position: relative;
       z-index: 3;
@@ -151,40 +101,33 @@
       font-weight: 300;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.6);
-      margin-bottom: 2px;
-      transition: opacity 0.8s ease, color 0.8s ease;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 4px;
+      transition: color 1.5s ease;
     }
 
     .timer-val {
-      font-size: 2.4rem;
+      font-size: 2.2rem;
       font-weight: 200;
       letter-spacing: 1px;
-      color: rgba(255, 255, 255, 0.95);
+      color: rgba(255, 255, 255, 0.9);
       font-variant-numeric: tabular-nums;
-      transition: opacity 0.8s ease;
     }
 
-    /* Cycles Counter at Bottom */
     .cycle-count {
       position: absolute;
       bottom: 10%;
       z-index: 2;
-      font-size: 0.8rem;
-      letter-spacing: 1.5px;
-      color: rgba(255, 255, 255, 0.2);
-      transition: opacity 0.8s ease;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.25);
+      transition: opacity 0.5s ease;
     }
   </style>
 </head>
 <body>
 
   <div class="app-container">
-    <div class="mode-selector">
-      <button class="mode-btn active" id="btnSleep" onclick="switchMode('sleep')">Sleep 4-7-8</button>
-      <button class="mode-btn" id="btnFocus" onclick="switchMode('focus')">Focus 4-4-4-4</button>
-    </div>
-
     <canvas id="particle-canvas"></canvas>
 
     <div class="circle-wrapper" id="circleTrigger">
@@ -199,17 +142,14 @@
   </div>
 
   <script>
-    const blob = document.getElementById('blob');
-    const phaseLabel = document.getElementById('phaseLabel');
-    const timerVal = document.getElementById('timerVal');
-    const cycleCount = document.getElementById('cycleCount');
-    const circleTrigger = document.getElementById('circleTrigger');
-    const btnSleep = document.getElementById('btnSleep');
-    const btnFocus = document.getElementById('btnFocus');
-    const canvas = document.getElementById('particle-canvas');
-    const ctx = canvas.getContext('2d');
+    const blob = document.getElementById("blob");
+    const phaseLabel = document.getElementById("phaseLabel");
+    const timerVal = document.getElementById("timerVal");
+    const cycleCount = document.getElementById("cycleCount");
+    const circleTrigger = document.getElementById("circleTrigger");
+    const canvas = document.getElementById("particle-canvas");
+    const ctx = canvas.getContext("2d");
 
-    let currentMode = 'sleep';
     let isRunning = false;
     let timer = null;
     let cycles = 0;
@@ -219,7 +159,7 @@
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
     class Particle {
@@ -227,11 +167,11 @@
         this.x = x;
         this.y = y;
         this.color = color;
-        this.radius = Math.random() * 2 + 1;
-        this.vx = (Math.random() - 0.5) * 0.8;
-        this.vy = (Math.random() - 0.5) * 0.8;
-        this.alpha = 0.8;
-        this.decay = Math.random() * 0.008 + 0.004;
+        this.radius = 1.5 + 3 * Math.random();
+        this.vx = (Math.random() - 0.5) * 1.2;
+        this.vy = (Math.random() - 0.5) * 1.2;
+        this.alpha = 1;
+        this.decay = 0.005 + 0.01 * Math.random();
       }
 
       update() {
@@ -244,7 +184,7 @@
         ctx.save();
         ctx.globalAlpha = Math.max(0, this.alpha);
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
         ctx.fillStyle = this.color;
         ctx.fill();
         ctx.restore();
@@ -254,7 +194,7 @@
     function createBurst(color) {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 30; i++) {
         particles.push(new Particle(centerX, centerY, color));
       }
     }
@@ -270,46 +210,14 @@
     }
     animateParticles();
 
-    const MODES = {
-      sleep: [
-        { name: "Inhale", duration: 4, color: "#818cf8", glow: "0 0 45px rgba(129, 140, 248, 0.4), inset 0 0 25px rgba(129, 140, 248, 0.15)", scale: 1.6 },
-        { name: "Hold",   duration: 7, color: "#c084fc", glow: "0 0 55px rgba(192, 132, 252, 0.5), inset 0 0 30px rgba(192, 132, 252, 0.2)", scale: 1.6 },
-        { name: "Exhale", duration: 8, color: "#2dd4bf", glow: "0 0 30px rgba(45, 212, 191, 0.3), inset 0 0 15px rgba(45, 212, 191, 0.1)",  scale: 1 }
-      ],
-      focus: [
-        { name: "Inhale", duration: 4, color: "#38bdf8", glow: "0 0 45px rgba(56, 189, 248, 0.4), inset 0 0 25px rgba(56, 189, 248, 0.15)", scale: 1.45 },
-        { name: "Hold",   duration: 4, color: "#34d399", glow: "0 0 45px rgba(52, 211, 153, 0.4), inset 0 0 25px rgba(52, 211, 153, 0.15)", scale: 1.45 },
-        { name: "Exhale", duration: 4, color: "#818cf8", glow: "0 0 30px rgba(129, 140, 248, 0.3), inset 0 0 15px rgba(129, 140, 248, 0.1)", scale: 1 },
-        { name: "Hold",   duration: 4, color: "#f43f5e", glow: "0 0 30px rgba(244, 63, 94, 0.3), inset 0 0 15px rgba(244, 63, 94, 0.1)",   scale: 1 }
-      ]
-    };
+    const PHASES = [
+      { name: "Inhale", duration: 4, color: "#818cf8", glow: "0 0 60px rgba(129, 140, 248, 0.5), inset 0 0 25px rgba(129, 140, 248, 0.2)", scale: 1.65 },
+      { name: "Hold",   duration: 7, color: "#c084fc", glow: "0 0 70px rgba(192, 132, 252, 0.6), inset 0 0 30px rgba(192, 132, 252, 0.25)", scale: 1.65 },
+      { name: "Exhale", duration: 8, color: "#2dd4bf", glow: "0 0 40px rgba(45, 212, 191, 0.35), inset 0 0 15px rgba(45, 212, 191, 0.15)", scale: 1 }
+    ];
 
+    let currentPhaseIdx = 0;
     let secondsLeft = 0;
-
-    function applyScale(scaleVal) {
-      blob.style.setProperty('--current-scale', scaleVal);
-      blob.style.transform = `scale(${scaleVal})`;
-    }
-
-    function switchMode(mode) {
-      if (currentMode === mode) return;
-      stopBreathing();
-      currentMode = mode;
-
-      if (mode === 'sleep') {
-        btnSleep.classList.add('active');
-        btnFocus.classList.remove('active');
-        blob.classList.remove('focus-mode');
-        blob.style.borderColor = "#818cf8";
-        blob.style.boxShadow = "0 0 35px rgba(129, 140, 248, 0.25)";
-      } else {
-        btnFocus.classList.add('active');
-        btnSleep.classList.remove('active');
-        blob.classList.add('focus-mode');
-        blob.style.borderColor = "#38bdf8";
-        blob.style.boxShadow = "0 0 35px rgba(56, 189, 248, 0.25)";
-      }
-    }
 
     function startBreathing() {
       isRunning = true;
@@ -319,28 +227,22 @@
     function stopBreathing() {
       isRunning = false;
       clearTimeout(timer);
-      applyScale(1);
-      
-      if (currentMode === 'sleep') {
-        blob.style.borderColor = "#818cf8";
-        blob.style.boxShadow = "0 0 35px rgba(129, 140, 248, 0.25)";
-      } else {
-        blob.style.borderColor = "#38bdf8";
-        blob.style.boxShadow = "0 0 35px rgba(56, 189, 248, 0.25)";
-      }
+      blob.style.transform = "scale(1)";
+      blob.style.borderColor = "#6366f1";
+      blob.style.boxShadow = "0 0 50px rgba(99, 102, 241, 0.25)";
       
       phaseLabel.textContent = "TAP TO";
       timerVal.textContent = "START";
-      phaseLabel.style.color = "rgba(255, 255, 255, 0.6)";
+      phaseLabel.style.color = "rgba(255, 255, 255, 0.5)";
     }
 
     function runPhase(phaseIdx) {
       if (!isRunning) return;
-      const phases = MODES[currentMode];
-      const phase = phases[phaseIdx];
+      currentPhaseIdx = phaseIdx;
+      const phase = PHASES[phaseIdx];
       secondsLeft = phase.duration;
 
-      applyScale(phase.scale);
+      blob.style.transform = `scale(${phase.scale})`;
       blob.style.borderColor = phase.color;
       blob.style.boxShadow = phase.glow;
       
@@ -357,19 +259,18 @@
         if (secondsLeft >= 0) {
           timer = setTimeout(updateCountdown, 1000);
         } else {
-          const nextIdx = (phaseIdx + 1) % phases.length;
-          if (nextIdx === 0) {
+          if (phaseIdx === 2) {
             cycles++;
             cycleCount.textContent = `Cycles completed: ${cycles}`;
           }
-          runPhase(nextIdx);
+          runPhase((phaseIdx + 1) % PHASES.length);
         }
       };
 
       updateCountdown();
     }
 
-    circleTrigger.addEventListener('click', () => {
+    circleTrigger.addEventListener("click", () => {
       if (isRunning) {
         stopBreathing();
       } else {

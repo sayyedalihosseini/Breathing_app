@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Breath - Sleep & Focus</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000000;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .app-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #000000;
+    }
+
+    /* Mode Selector at Top */
+    .mode-selector {
+      position: absolute;
+      top: 10%;
+      display: flex;
+      gap: 12px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.4);
+      padding: 8px 18px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 20px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .mode-btn.active {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Canvas for Particles */
+    #particle-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Circle / Box Container */
+    .circle-wrapper {
+      position: relative;
+      width: 280px;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      cursor: pointer;
+    }
+
+    /* Organic Blob (Default: Sleep Mode) */
+    .blob {
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle at 35% 35%, #6366f1, #3b82f6);
+      border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+      box-shadow: 0 0 50px rgba(99, 102, 241, 0.3);
+      transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1), background 1.5s ease, box-shadow 1.5s ease, border-radius 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: morphSleep 8s ease-in-out infinite, float 6s ease-in-out infinite;
+    }
+
+    /* Square Morph (Focus Mode) */
+    .blob.focus-mode {
+      border-radius: 28% 28% 28% 28% / 28% 28% 28% 28%;
+      animation: morphFocus 6s ease-in-out infinite, float 6s ease-in-out infinite;
+    }
+
+    @keyframes morphSleep {
+      0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+      34% { border-radius: 70% 30% 50% 50% / 30% 60% 40% 70%; }
+      67% { border-radius: 100% 60% 30% 70% / 60% 30% 70% 40%; }
+    }
+
+    @keyframes morphFocus {
+      0%, 100% { border-radius: 28% 28% 28% 28% / 28% 28% 28% 28%; }
+      50% { border-radius: 38% 22% 35% 25% / 25% 38% 22% 35%; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(var(--current-scale, 1)); }
+      50% { transform: translateY(-8px) scale(var(--current-scale, 1)); }
+    }
+
+    /* Cute Face */
+    .face {
+      position: relative;
+      z-index: 3;
+      font-size: 2rem;
+      letter-spacing: 2px;
+      opacity: 0.95;
+      transition: all 0.5s ease;
+      pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+
+    /* Status Text & Cycle Count */
+    .status-text {
+      position: absolute;
+      bottom: 18%;
+      z-index: 2;
+      font-size: 1.1rem;
+      font-weight: 300;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.6);
+      text-transform: uppercase;
+      transition: opacity 0.5s ease, color 0.5s ease;
+    }
+
+    .cycle-count {
+      position: absolute;
+      bottom: 10%;
+      z-index: 2;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.25);
+      transition: opacity 0.5s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Top Mode Selection -->
+    <div class="mode-selector">
+      <button class="mode-btn active" id="btnSleep" onclick="switchMode('sleep')">Sleep 4-7-8</button>
+      <button class="mode-btn" id="btnFocus" onclick="switchMode('focus')">Focus 4-4-4-4</button>
+    </div>
+
+    <!-- Background Particle Canvas -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Center Trigger Blob -->
+    <div class="circle-wrapper" id="circleTrigger">
+      <div class="blob" id="blob"></div>
+      <div class="face" id="face">⊙ ‿ ⊙</div>
+    </div>
+
+    <div class="status-text" id="statusText">Tap to Start</div>
+    <div class="cycle-count" id="cycleCount">Cycles completed: 0</div>
+  </div>
+
+  <script>
+    const blob = document.getElementById('blob');
+    const face = document.getElementById('face');
+    const statusText = document.getElementById('statusText');
+    const cycleCount = document.getElementById('cycleCount');
+    const circleTrigger = document.getElementById('circleTrigger');
+    const btnSleep = document.getElementById('btnSleep');
+    const btnFocus = document.getElementById('btnFocus');
+    const canvas = document.getElementById('particle-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentMode = 'sleep'; // 'sleep' or 'focus'
+    let isRunning = false;
+    let timer = null;
+    let cycles = 0;
+    let particles = [];
+
+    // Canvas Resize
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Particle Logic
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.radius = Math.random() * 3 + 1.5;
+        this.vx = (Math.random() - 0.5) * 1.2;
+        this.vy = (Math.random() - 0.5) * 1.2;
+        this.alpha = 1;
+        this.decay = Math.random() * 0.01 + 0.005;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.alpha -= this.decay;
+      }
+
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.alpha);
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function createBurst(color) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      for (let i = 0; i < 30; i++) {
+        particles.push(new Particle(centerX, centerY, color));
+      }
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (particles[i].alpha <= 0) particles.splice(i, 1);
+      }
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    // Mode Phase Configurations
+    const MODES = {
+      sleep: [
+        { name: "Inhale", duration: 4, color: "radial-gradient(circle at 35% 35%, #818cf8, #4f46e5)", glow: "0 0 80px rgba(129, 140, 248, 0.6)", scale: 1.65, face: "( ⊙ ‿ ⊙ )" },
+        { name: "Hold",   duration: 7, color: "radial-gradient(circle at 35% 35%, #c084fc, #9333ea)", glow: "0 0 90px rgba(192, 132, 252, 0.7)", scale: 1.65, face: "( ＞ ‿ ＜ )" },
+        { name: "Exhale", duration: 8, color: "radial-gradient(circle at 35% 35%, #2dd4bf, #0d9488)", glow: "0 0 50px rgba(45, 212, 191, 0.4)",  scale: 1,    face: "( u ‿ u )" }
+      ],
+      focus: [
+        { name: "Inhale", duration: 4, color: "radial-gradient(circle at 35% 35%, #38bdf8, #0284c7)", glow: "0 0 80px rgba(56, 189, 248, 0.6)", scale: 1.5, face: "( ◉ ‿ ◉ )" },
+        { name: "Hold",   duration: 4, color: "radial-gradient(circle at 35% 35%, #34d399, #059669)", glow: "0 0 80px rgba(52, 211, 153, 0.6)", scale: 1.5, face: "( ⏠ ‿ ⏠ )" },
+        { name: "Exhale", duration: 4, color: "radial-gradient(circle at 35% 35%, #818cf8, #4338ca)", glow: "0 0 50px rgba(129, 140, 248, 0.4)", scale: 1,   face: "( ⩌ ‿ ⩌ )" },
+        { name: "Hold",   duration: 4, color: "radial-gradient(circle at 35% 35%, #f43f5e, #be123c)", glow: "0 0 50px rgba(244, 63, 94, 0.4)",  scale: 1,   face: "( ಠ ‿ ಠ )" }
+      ]
+    };
+
+    let secondsLeft = 0;
+
+    function switchMode(mode) {
+      if (currentMode === mode) return;
+      stopBreathing();
+      currentMode = mode;
+
+      if (mode === 'sleep') {
+        btnSleep.classList.add('active');
+        btnFocus.classList.remove('active');
+        blob.classList.remove('focus-mode');
+        blob.style.background = "radial-gradient(circle at 35% 35%, #6366f1, #3b82f6)";
+      } else {
+        btnFocus.classList.add('active');
+        btnSleep.classList.remove('active');
+        blob.classList.add('focus-mode');
+        blob.style.background = "radial-gradient(circle at 35% 35%, #0284c7, #0369a1)";
+      }
+    }
+
+    function startBreathing() {
+      isRunning = true;
+      statusText.style.opacity = "1";
+      runPhase(0);
+    }
+
+    function stopBreathing() {
+      isRunning = false;
+      clearTimeout(timer);
+      blob.style.setProperty('--current-scale', 1);
+      blob.style.transform = 'scale(1)';
+      
+      if (currentMode === 'sleep') {
+        blob.style.background = "radial-gradient(circle at 35% 35%, #6366f1, #3b82f6)";
+        blob.style.boxShadow = "0 0 50px rgba(99, 102, 241, 0.3)";
+      } else {
+        blob.style.background = "radial-gradient(circle at 35% 35%, #0284c7, #0369a1)";
+        blob.style.boxShadow = "0 0 50px rgba(2, 132, 199, 0.3)";
+      }
+      
+      face.textContent = "⊙ ‿ ⊙";
+      statusText.textContent = "Tap to Start";
+      statusText.style.color = "rgba(255, 255, 255, 0.6)";
+    }
+
+    function runPhase(phaseIdx) {
+      if (!isRunning) return;
+      const phases = MODES[currentMode];
+      const phase = phases[phaseIdx];
+      secondsLeft = phase.duration;
+
+      blob.style.setProperty('--current-scale', phase.scale);
+      blob.style.transform = `scale(${phase.scale})`;
+      blob.style.background = phase.color;
+      blob.style.boxShadow = phase.glow;
+      face.textContent = phase.face;
+      statusText.style.color = "rgba(255,255,255,0.9)";
+
+      // Particle Burst on Phase Change
+      const burstColor = phase.color.includes('#818cf8') ? '#818cf8' : 
+                         phase.color.includes('#c084fc') ? '#c084fc' : 
+                         phase.color.includes('#38bdf8') ? '#38bdf8' : '#34d399';
+      createBurst(burstColor);
+
+      const updateCountdown = () => {
+        if (!isRunning) return;
+        statusText.textContent = `${phase.name} • ${secondsLeft}`;
+        secondsLeft--;
+
+        if (secondsLeft >= 0) {
+          timer = setTimeout(updateCountdown, 1000);
+        } else {
+          const nextIdx = (phaseIdx + 1) % phases.length;
+          if (nextIdx === 0) {
+            cycles++;
+            cycleCount.textContent = `Cycles completed: ${cycles}`;
+          }
+          runPhase(nextIdx);
+        }
+      };
+
+      updateCountdown();
+    }
+
+    // Toggle Play/Pause on Center Click
+    circleTrigger.addEventListener('click', () => {
+      if (isRunning) {
+        stopBreathing();
+      } else {
+        startBreathing();
+      }
+    });
+  </script>
+</body>
+</html>

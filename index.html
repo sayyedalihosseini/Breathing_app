@@ -112,11 +112,48 @@
     fill: none; stroke: currentColor; stroke-width: 1.6;
     stroke-linecap: round; stroke-linejoin: round;
   }
-  .sound .on-icon { display: none; }
-  .sound[aria-pressed="true"] { color: var(--c); }
-  .sound[aria-pressed="true"] .on-icon { display: inline; }
-  .sound[aria-pressed="true"] .off-icon { display: none; }
+  .sound svg { display: none; }
+  .sound[data-s="chime"]   .i-chime,
+  .sound[data-s="tone"]    .i-tone,
+  .sound[data-s="vibrate"] .i-vibrate,
+  .sound[data-s="off"]     .i-off { display: inline; }
+  .sound:not([data-s="off"]) { color: var(--c); }
   .sound:focus-visible { outline: 1px solid var(--c); }
+
+  /* Small status toast (sound mode etc.) */
+  .toast {
+    position: fixed;
+    top: calc(max(20px, env(safe-area-inset-top)) + 56px);
+    left: 50%;
+    transform: translate(-50%, -6px);
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: rgba(255,255,255,0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+    z-index: 11;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Sleep finished: slow fade to full black, tap to wake */
+  .night {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 8s var(--ease);
+    z-index: 50;
+  }
+  .night.on { opacity: 1; pointer-events: auto; cursor: pointer; }
+  .night.wake { transition: opacity 0.8s var(--ease); }
 
   /* ---------- Stage ---------- */
   .stage {
@@ -336,15 +373,24 @@
     <button class="active" data-mode="sleep" role="tab" aria-selected="true" aria-label="Sleep" title="Sleep · 4-7-8">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/><path d="M16.5 3.5v3M15 5h3"/></svg>
     </button>
+    <button data-mode="calm" role="tab" aria-selected="false" aria-label="Calm" title="Calm · Coherent breathing 5-5">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 9c2.4-2.4 4.7-2.4 7 0s4.7 2.4 7 0 4.7-2.4 5 0"/><path d="M2.5 15c2.4-2.4 4.7-2.4 7 0s4.7 2.4 7 0 4.7-2.4 5 0"/></svg>
+    </button>
+    <button data-mode="sigh" role="tab" aria-selected="false" aria-label="Sigh" title="Sigh · Physiological sigh">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/></svg>
+    </button>
     <button data-mode="focus" role="tab" aria-selected="false" aria-label="Focus" title="Focus · Box breathing">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg>
     </button>
   </nav>
 
-  <button class="sound" id="sound" aria-pressed="true" aria-label="Sound and vibration cues" title="Sound & vibration cues">
-    <svg class="on-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
-    <svg class="off-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+  <button class="sound" id="sound" data-s="chime" aria-label="Cues: chime" title="Cues: chime · tap to change">
+    <svg class="i-chime" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+    <svg class="i-tone" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-4 5-2"/></svg>
+    <svg class="i-vibrate" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4.5 9v6M19.5 9v6M2 10.5v3M22 10.5v3"/></svg>
+    <svg class="i-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
   </button>
+  <div class="toast" id="toast" aria-live="polite"></div>
 
   <main class="stage">
     <div class="particles" id="particles"></div>
@@ -367,6 +413,8 @@
     <strong id="levelupName"></strong>
   </div>
 
+  <div class="night" id="night" aria-hidden="true"></div>
+
   <footer class="footer">
     <span class="protocol" id="protocol">4-7-8 technique</span>
     <div class="level">
@@ -386,6 +434,7 @@
       protocol: '4-7-8 technique',
       shape: 0,            // 0 = circle, 1 = rounded square
       rest: '#6366f1',
+      autoStop: true,      // after the last level: stop, fade to black, let the phone sleep
       levels: [
         { at: 4, name: 'Screen Off' },
         { at: 6, name: 'Silence the Brain' },
@@ -395,6 +444,39 @@
         { name: 'INHALE', secs: 4, color: '#6366f1', scale: 1.38, tone: 523.25, buzz: [40] },
         { name: 'HOLD',   secs: 7, color: '#a855f7', scale: 1.38, tone: 392.00, buzz: [20, 80, 20] },
         { name: 'EXHALE', secs: 8, color: '#2dd4bf', scale: 0.82, tone: 329.63, buzz: [90] },
+      ],
+    },
+    calm: {
+      label: 'CALM',
+      idle: '5·5',
+      protocol: 'Coherent breathing · 6 per minute',
+      shape: 0.35,
+      rest: '#22d3ee',
+      levels: [
+        { at: 6,  name: 'Settle' },        // 1 min
+        { at: 18, name: 'Steady' },        // 3 min
+        { at: 30, name: 'Still Water' },   // 5 min
+      ],
+      phases: [
+        { name: 'INHALE', secs: 5, color: '#22d3ee', scale: 1.36, tone: 523.25, buzz: [40] },
+        { name: 'EXHALE', secs: 5, color: '#34d399', scale: 0.82, tone: 329.63, buzz: [90] },
+      ],
+    },
+    sigh: {
+      label: 'SIGH',
+      idle: '2·1·6',
+      protocol: 'Physiological sigh · quick stress relief',
+      shape: 0.65,
+      rest: '#f59e0b',
+      levels: [
+        { at: 2, name: 'Release' },
+        { at: 4, name: 'Unclench' },
+        { at: 6, name: 'Reset' },
+      ],
+      phases: [
+        { name: 'INHALE',  secs: 2, color: '#f59e0b', scale: 1.24, tone: 493.88, buzz: [40] },
+        { name: 'TOP UP',  secs: 1, color: '#fb7185', scale: 1.40, tone: 587.33, buzz: [25] },
+        { name: 'EXHALE',  secs: 6, color: '#a78bfa', scale: 0.82, tone: 329.63, buzz: [120] },
       ],
     },
     focus: {
@@ -433,37 +515,69 @@
   let phaseStart = 0;
   let cycles = 0;
   let lastShown = null;
+  let finished = false;                       // Sleep reached its last level and auto-stopped
   let pausedAt = null;                         // { index, elapsed } while paused mid-cycle
-  const cyclesBy = { sleep: 0, focus: 0 };     // progress is kept per mode for the session
+  const cyclesBy = { sleep: 0, calm: 0, sigh: 0, focus: 0 };     // progress is kept per mode for the session
 
   // ---------- Settings ----------
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
-  let soundOn = store.get('breathe.sound', true);
+
+  // ---------- Toast ----------
+  const toastEl = $('toast');
+  let toastTimer;
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1600);
+  }
+
+  // ---------- Cues: chime / tone / vibrate only / off ----------
+  // chime   = soft bell at every phase change
+  // tone    = continuous soft hum that rises as you inhale and falls as you exhale
+  // vibrate = vibration only (Android; iPhones don't allow web vibration)
+  // (On iPhone the ring/silent switch also mutes web audio.)
+  const SOUND_MODES = ['chime', 'tone', 'vibrate', 'off'];
+  const SOUND_NAMES = { chime: 'Chime', tone: 'Breath tone', vibrate: 'Vibrate only', off: 'Silent' };
+  let soundMode = store.get('breathe.sound', 'chime');
+  if (soundMode === true) soundMode = 'chime';            // old on/off setting
+  if (!SOUND_MODES.includes(soundMode)) soundMode = 'off';
   const soundBtn = $('sound');
-  function renderSound() { soundBtn.setAttribute('aria-pressed', soundOn); }
+  function renderSound() {
+    soundBtn.dataset.s = soundMode;
+    soundBtn.setAttribute('aria-label', `Cues: ${SOUND_NAMES[soundMode]}`);
+    soundBtn.title = `Cues: ${SOUND_NAMES[soundMode]} · tap to change`;
+  }
   soundBtn.addEventListener('click', () => {
-    soundOn = !soundOn;
-    store.set('breathe.sound', soundOn);
+    soundMode = SOUND_MODES[(SOUND_MODES.indexOf(soundMode) + 1) % SOUND_MODES.length];
+    store.set('breathe.sound', soundMode);
     renderSound();
-    if (soundOn) { unlockAudio(); chime(440); }
+    toast(SOUND_NAMES[soundMode]);
+    unlockAudio();
+    toneStop();
+    if (soundMode === 'chime') chime(440);
+    if (soundMode === 'vibrate' && navigator.vibrate) navigator.vibrate(40);
+    if (soundMode === 'tone' && running) {
+      const p = MODES[mode].phases[phaseIndex];
+      toneStart(currentScale());
+      toneTo(p.scale, Math.max(0.4, p.secs - (performance.now() - phaseStart) / 1000));
+    }
   });
 
-  // ---------- Sound + vibration cues ----------
-  // Soft sine chime at every phase change, so you can breathe with your eyes closed.
-  // (On iPhone the ring/silent switch mutes web audio; vibration is Android only.)
   let audioCtx = null;
   function unlockAudio() {
-    if (!soundOn) return;
+    if (soundMode !== 'chime' && soundMode !== 'tone') return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     if (!audioCtx) audioCtx = new AC();
     if (audioCtx.state === 'suspended') audioCtx.resume();
   }
+
   function chime(freq) {
-    if (!soundOn || !audioCtx) return;
+    if (soundMode !== 'chime' || !audioCtx) return;
     const t = audioCtx.currentTime;
     const out = audioCtx.createGain();
     out.gain.setValueAtTime(0.0001, t);
@@ -480,9 +594,67 @@
       o.stop(t + 1.9);
     });
   }
+
+  // Breath tone: two slightly detuned sines through a low-pass filter; pitch follows the shape size
+  let tone = null;
+  const scaleToHz = sc => 150 + (sc - 0.8) / 0.6 * 120;     // 0.8x → 150 Hz … 1.4x → 270 Hz
+  function toneStart(fromScale) {
+    if (soundMode !== 'tone' || !audioCtx || tone) return;
+    const t = audioCtx.currentTime;
+    const out = audioCtx.createGain();
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.exponentialRampToValueAtTime(0.07, t + 1.2);
+    lp.connect(out).connect(audioCtx.destination);
+    const oscs = [0, 4].map(detune => {
+      const o = audioCtx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = scaleToHz(fromScale);
+      o.detune.value = detune;
+      o.connect(lp);
+      o.start(t);
+      return o;
+    });
+    tone = { out, oscs };
+  }
+  function toneTo(scale, secs) {
+    if (!tone) return;
+    const t = audioCtx.currentTime;
+    tone.oscs.forEach(o => {
+      o.frequency.cancelScheduledValues(t);
+      o.frequency.setValueAtTime(o.frequency.value, t);
+      o.frequency.linearRampToValueAtTime(scaleToHz(scale), t + secs);
+    });
+  }
+  function toneStop() {
+    if (!tone) return;
+    const { out, oscs } = tone, t = audioCtx.currentTime;
+    out.gain.cancelScheduledValues(t);
+    out.gain.setValueAtTime(Math.max(out.gain.value, 0.0001), t);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+    oscs.forEach(o => o.stop(t + 0.9));
+    tone = null;
+  }
+
   function cue(p) {
     chime(p.tone);
-    if (soundOn && navigator.vibrate) navigator.vibrate(p.buzz);
+    if (soundMode !== 'off' && navigator.vibrate) navigator.vibrate(p.buzz);
+  }
+
+  // ---------- Keep the screen on while breathing ----------
+  let wakeLock = null;
+  async function keepAwake() {
+    if (!('wakeLock' in navigator) || wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch { wakeLock = null; }
+  }
+  function letSleep() {
+    if (wakeLock) wakeLock.release().catch(() => {});
+    wakeLock = null;
   }
 
   // ---------- Scale (CSS transitions, duration matched to the phase) ----------
@@ -496,12 +668,16 @@
 
   // Stop the shape exactly where it is (used when pausing)
   function freezeScale() {
-    const t = getComputedStyle(scaler).transform;
-    const s = (t && t !== 'none') ? new DOMMatrix(t).a : 1;
+    const s = currentScale();
     scaler.style.transition = 'none';
     center.style.transition = 'none';
     scaler.style.transform = `scale(${s})`;
     center.style.transform = `scale(${1 / s})`;
+  }
+
+  function currentScale() {
+    const t = getComputedStyle(scaler).transform;
+    return (t && t !== 'none') ? new DOMMatrix(t).a : 1;
   }
 
   function setColor(c) { root.style.setProperty('--c', c); }
@@ -519,6 +695,7 @@
     if (p.scale !== prev.scale || i === 0) {
       // Breathing movement spans the full phase so the shape never stalls or jumps
       setScale(p.scale, p.secs, 'cubic-bezier(0.37, 0, 0.63, 1)');
+      toneTo(p.scale, p.secs);
     }
     burst(p.color);
     cue(p);
@@ -526,6 +703,14 @@
 
   function start() {
     unlockAudio();                          // must happen inside the tap on iOS
+    wakeUp();
+    keepAwake();
+    toneStart(currentScale());
+    if (finished) {                         // "go again" after Sleep finished: start from Level 0
+      finished = false;
+      cycles = cyclesBy[mode] = 0;
+      renderLevel();
+    }
     running = true;
     hintEl.style.opacity = 0;
     scaler.setAttribute('aria-label', 'Pause breathing');
@@ -540,7 +725,9 @@
       pausedAt = null;
       setColor(p.color);
       phaseEl.textContent = p.name;
-      setScale(p.scale, Math.max(0.4, p.secs - (now - phaseStart) / 1000), 'cubic-bezier(0.37, 0, 0.63, 1)');
+      const left = Math.max(0.4, p.secs - (now - phaseStart) / 1000);
+      setScale(p.scale, left, 'cubic-bezier(0.37, 0, 0.63, 1)');
+      toneTo(p.scale, left);
       cue(p);
       return;
     }
@@ -553,6 +740,8 @@
     const p = MODES[mode].phases[phaseIndex];
     pausedAt = { index: phaseIndex, elapsed: Math.min(p.secs, (performance.now() - phaseStart) / 1000) };
     freezeScale();
+    toneStop();
+    letSleep();
     scaler.setAttribute('aria-label', 'Resume breathing');
     phaseEl.textContent = 'PAUSED';
     hintEl.textContent = 'TAP TO RESUME';
@@ -563,8 +752,35 @@
   function reset() {
     running = false;
     pausedAt = null;
+    toneStop();
+    letSleep();
     setScale(1, 1.5, 'cubic-bezier(0.45, 0, 0.25, 1)');
   }
+
+  // ---------- Sleep finished: stop, fade the screen to black, let the phone lock ----------
+  const nightEl = $('night');
+  let nightTimer;
+  function finishSleep() {
+    reset();
+    finished = true;
+    setScale(1, 4, 'cubic-bezier(0.45, 0, 0.25, 1)');
+    setColor(MODES[mode].rest);
+    phaseEl.textContent = 'SLEEP WELL';
+    countEl.textContent = '☾';
+    hintEl.textContent = 'TAP TO GO AGAIN';
+    hintEl.style.opacity = 1;
+    scaler.setAttribute('aria-label', 'Start breathing');
+    clearTimeout(nightTimer);
+    nightTimer = setTimeout(() => nightEl.classList.add('on'), 4500);   // after the level banner
+  }
+  function wakeUp() {
+    clearTimeout(nightTimer);
+    if (!nightEl.classList.contains('on')) return;
+    nightEl.classList.add('wake');
+    nightEl.classList.remove('on');
+    setTimeout(() => nightEl.classList.remove('wake'), 900);
+  }
+  nightEl.addEventListener('click', wakeUp);
 
   function showIdle() {
     const m = MODES[mode];
@@ -582,6 +798,8 @@
   function setMode(next) {
     if (next === mode) return;
     reset();
+    wakeUp();
+    if (finished) { finished = false; cycles = 0; }
     cyclesBy[mode] = cycles;
     mode = next;
     cycles = cyclesBy[mode];
@@ -653,6 +871,8 @@
     const after = levelFor(cycles);
     renderLevel();
     if (after > before) announceLevel(after);
+    const m = MODES[mode];
+    return m.autoStop && cycles >= m.levels[m.levels.length - 1].at;
   }
 
   // ---------- Particles ----------
@@ -721,8 +941,8 @@
       const elapsed = (now - phaseStart) / 1000;
       if (elapsed >= p.secs) {
         const nextIdx = (phaseIndex + 1) % phases.length;
-        if (nextIdx === 0) completeCycle();
-        enterPhase(nextIdx, phaseStart + p.secs * 1000);
+        if (nextIdx === 0 && completeCycle()) finishSleep();
+        else enterPhase(nextIdx, phaseStart + p.secs * 1000);
       } else {
         const remaining = Math.max(1, Math.ceil(p.secs - elapsed));
         if (remaining !== lastShown) {
@@ -751,8 +971,8 @@
   modeButtons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
 
   // ---------- Swipe between modes ----------
-  // Swipe left → Focus, swipe right → Sleep (same order as the mode bar)
-  const ORDER = ['sleep', 'focus'];
+  // Swipe left → next mode, swipe right → previous (same order as the mode bar)
+  const ORDER = ['sleep', 'calm', 'sigh', 'focus'];
   function swipe(dir) {                     // dir: +1 = next (swipe left), -1 = previous
     const i = ORDER.indexOf(mode) + dir;
     if (i < 0 || i >= ORDER.length) { nudge(-dir); return; }
@@ -820,7 +1040,10 @@
 
   // Resync the clock if the tab was hidden mid-session
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && running) enterPhase(phaseIndex, performance.now());
+    if (!document.hidden && running) {
+      enterPhase(phaseIndex, performance.now());
+      keepAwake();                         // the OS drops the wake lock when the app is hidden
+    }
   });
 
   renderSound();

@@ -1,6 +1,6 @@
 // Breathe — offline support
 // Bump VERSION whenever you change any file, so phones pick up the new cache.
-const VERSION = 'breathe-v2';
+const VERSION = 'breathe-v3';
 
 const ASSETS = [
   './',

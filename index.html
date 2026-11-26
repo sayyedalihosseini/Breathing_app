@@ -90,6 +90,34 @@
   .modes button.active svg { filter: drop-shadow(0 0 4px var(--c)); }
   .modes button:focus-visible { outline: 1px solid var(--c); }
 
+  /* ---------- Sound / haptics toggle ---------- */
+  .sound {
+    position: fixed;
+    top: max(20px, env(safe-area-inset-top));
+    right: max(16px, calc(env(safe-area-inset-right) + 12px));
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: rgba(255,255,255,0.35);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    z-index: 10;
+    transition: color var(--t) var(--ease);
+  }
+  .sound svg {
+    width: 18px; height: 18px;
+    fill: none; stroke: currentColor; stroke-width: 1.6;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .sound .on-icon { display: none; }
+  .sound[aria-pressed="true"] { color: var(--c); }
+  .sound[aria-pressed="true"] .on-icon { display: inline; }
+  .sound[aria-pressed="true"] .off-icon { display: none; }
+  .sound:focus-visible { outline: 1px solid var(--c); }
+
   /* ---------- Stage ---------- */
   .stage {
     position: fixed;
@@ -313,11 +341,16 @@
     </button>
   </nav>
 
+  <button class="sound" id="sound" aria-pressed="true" aria-label="Sound and vibration cues" title="Sound & vibration cues">
+    <svg class="on-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <svg class="off-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+  </button>
+
   <main class="stage">
     <div class="particles" id="particles"></div>
 
     <div class="drag" id="drag">
-      <div class="scaler" id="scaler" role="button" tabindex="0" aria-label="Start or pause breathing">
+      <div class="scaler" id="scaler" role="button" tabindex="0" aria-label="Start breathing">
         <div class="blob ghost" id="ghost"></div>
         <div class="blob" id="blob"></div>
         <div class="center" id="center">
@@ -359,9 +392,9 @@
         { at: 8, name: 'Knockout' },
       ],
       phases: [
-        { name: 'INHALE', secs: 4, color: '#6366f1', scale: 1.38 },
-        { name: 'HOLD',   secs: 7, color: '#a855f7', scale: 1.38 },
-        { name: 'EXHALE', secs: 8, color: '#2dd4bf', scale: 0.82 },
+        { name: 'INHALE', secs: 4, color: '#6366f1', scale: 1.38, tone: 523.25, buzz: [40] },
+        { name: 'HOLD',   secs: 7, color: '#a855f7', scale: 1.38, tone: 392.00, buzz: [20, 80, 20] },
+        { name: 'EXHALE', secs: 8, color: '#2dd4bf', scale: 0.82, tone: 329.63, buzz: [90] },
       ],
     },
     focus: {
@@ -376,10 +409,10 @@
         { at: 15, name: 'God Mode' },
       ],
       phases: [
-        { name: 'INHALE', secs: 4, color: '#38bdf8', scale: 1.34 },
-        { name: 'HOLD',   secs: 4, color: '#10b981', scale: 1.34 },
-        { name: 'EXHALE', secs: 4, color: '#8b5cf6', scale: 0.84 },
-        { name: 'HOLD',   secs: 4, color: '#f43f5e', scale: 0.84 },
+        { name: 'INHALE', secs: 4, color: '#38bdf8', scale: 1.34, tone: 523.25, buzz: [40] },
+        { name: 'HOLD',   secs: 4, color: '#10b981', scale: 1.34, tone: 392.00, buzz: [20, 80, 20] },
+        { name: 'EXHALE', secs: 4, color: '#8b5cf6', scale: 0.84, tone: 329.63, buzz: [90] },
+        { name: 'HOLD',   secs: 4, color: '#f43f5e', scale: 0.84, tone: 392.00, buzz: [20, 80, 20] },
       ],
     },
   };
@@ -400,6 +433,57 @@
   let phaseStart = 0;
   let cycles = 0;
   let lastShown = null;
+  let pausedAt = null;                         // { index, elapsed } while paused mid-cycle
+  const cyclesBy = { sleep: 0, focus: 0 };     // progress is kept per mode for the session
+
+  // ---------- Settings ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  let soundOn = store.get('breathe.sound', true);
+  const soundBtn = $('sound');
+  function renderSound() { soundBtn.setAttribute('aria-pressed', soundOn); }
+  soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    store.set('breathe.sound', soundOn);
+    renderSound();
+    if (soundOn) { unlockAudio(); chime(440); }
+  });
+
+  // ---------- Sound + vibration cues ----------
+  // Soft sine chime at every phase change, so you can breathe with your eyes closed.
+  // (On iPhone the ring/silent switch mutes web audio; vibration is Android only.)
+  let audioCtx = null;
+  function unlockAudio() {
+    if (!soundOn) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function chime(freq) {
+    if (!soundOn || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    const out = audioCtx.createGain();
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.exponentialRampToValueAtTime(0.14, t + 0.05);
+    out.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+    out.connect(audioCtx.destination);
+    [[freq, 1], [freq * 2, 0.18]].forEach(([f, g]) => {
+      const o = audioCtx.createOscillator(), og = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = f;
+      og.gain.value = g;
+      o.connect(og).connect(out);
+      o.start(t);
+      o.stop(t + 1.9);
+    });
+  }
+  function cue(p) {
+    chime(p.tone);
+    if (soundOn && navigator.vibrate) navigator.vibrate(p.buzz);
+  }
 
   // ---------- Scale (CSS transitions, duration matched to the phase) ----------
   function setScale(scale, seconds, easing) {
@@ -408,6 +492,16 @@
     center.style.transition = t;
     scaler.style.transform = `scale(${scale})`;
     center.style.transform = `scale(${1 / scale})`;
+  }
+
+  // Stop the shape exactly where it is (used when pausing)
+  function freezeScale() {
+    const t = getComputedStyle(scaler).transform;
+    const s = (t && t !== 'none') ? new DOMMatrix(t).a : 1;
+    scaler.style.transition = 'none';
+    center.style.transition = 'none';
+    scaler.style.transform = `scale(${s})`;
+    center.style.transform = `scale(${1 / s})`;
   }
 
   function setColor(c) { root.style.setProperty('--c', c); }
@@ -427,43 +521,70 @@
       setScale(p.scale, p.secs, 'cubic-bezier(0.37, 0, 0.63, 1)');
     }
     burst(p.color);
+    cue(p);
   }
 
   function start() {
+    unlockAudio();                          // must happen inside the tap on iOS
     running = true;
     hintEl.style.opacity = 0;
     scaler.setAttribute('aria-label', 'Pause breathing');
     const now = performance.now();
-    // First inhale starts from the resting 1.0x scale
+
+    if (pausedAt) {
+      // Resume mid-phase: same phase, same remaining time, shape continues from where it froze
+      const p = MODES[mode].phases[pausedAt.index];
+      phaseIndex = pausedAt.index;
+      phaseStart = now - pausedAt.elapsed * 1000;
+      lastShown = null;
+      pausedAt = null;
+      setColor(p.color);
+      phaseEl.textContent = p.name;
+      setScale(p.scale, Math.max(0.4, p.secs - (now - phaseStart) / 1000), 'cubic-bezier(0.37, 0, 0.63, 1)');
+      cue(p);
+      return;
+    }
+    // Fresh cycle: first inhale starts from the resting 1.0x scale
     enterPhase(0, now);
-    setScale(MODES[mode].phases[0].scale, MODES[mode].phases[0].secs, 'cubic-bezier(0.37, 0, 0.63, 1)');
   }
 
-  function stop() {
+  function pause() {
     running = false;
-    scaler.setAttribute('aria-label', 'Start breathing');
-    // Gently settle back to rest instead of snapping
+    const p = MODES[mode].phases[phaseIndex];
+    pausedAt = { index: phaseIndex, elapsed: Math.min(p.secs, (performance.now() - phaseStart) / 1000) };
+    freezeScale();
+    scaler.setAttribute('aria-label', 'Resume breathing');
+    phaseEl.textContent = 'PAUSED';
+    hintEl.textContent = 'TAP TO RESUME';
+    hintEl.style.opacity = 1;
+  }
+
+  // Full stop (mode switch): settle gently back to rest instead of snapping
+  function reset() {
+    running = false;
+    pausedAt = null;
     setScale(1, 1.5, 'cubic-bezier(0.45, 0, 0.25, 1)');
-    showIdle();
   }
 
   function showIdle() {
     const m = MODES[mode];
     setColor(m.rest);
+    scaler.setAttribute('aria-label', 'Start breathing');
     phaseEl.textContent = m.label;
     countEl.textContent = m.idle;
-    hintEl.textContent = cycles ? 'TAP TO RESUME' : 'TAP TO BEGIN\n‹  SWIPE  ›';
+    hintEl.textContent = cycles ? 'TAP TO CONTINUE' : 'TAP TO BEGIN\n‹  SWIPE  ›';
     hintEl.style.opacity = 1;
   }
 
-  function toggle() { running ? stop() : start(); }
+  function toggle() { running ? pause() : start(); }
 
-  // Switching mode always ends the current session and starts the new one at Level 0
+  // Switching mode stops the current cycle, but each mode keeps its own cycles/level
   function setMode(next) {
     if (next === mode) return;
-    if (running) stop();
+    reset();
+    cyclesBy[mode] = cycles;
     mode = next;
-    cycles = 0;
+    cycles = cyclesBy[mode];
     modeButtons.forEach(b => {
       const on = b.dataset.mode === mode;
       b.classList.toggle('active', on);
@@ -528,6 +649,7 @@
   function completeCycle() {
     const before = levelFor(cycles);
     cycles++;
+    cyclesBy[mode] = cycles;
     const after = levelFor(cycles);
     renderLevel();
     if (after > before) announceLevel(after);
@@ -701,10 +823,16 @@
     if (!document.hidden && running) enterPhase(phaseIndex, performance.now());
   });
 
+  renderSound();
   buildTrack();
   renderLevel();
   showIdle();
   requestAnimationFrame(frame);
+
+  // ---------- Offline ----------
+  if ('serviceWorker' in navigator) {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 })();
 </script>
 </body>

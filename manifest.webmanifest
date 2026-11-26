@@ -1,8 +1,9 @@
 {
+  "id": "./breathe.html",
   "name": "Breathe — Sleep & Focus",
   "short_name": "Breathe",
   "description": "Minimal 4-7-8 and box breathing for sleep and focus.",
-  "start_url": "./breathe.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
